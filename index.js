@@ -1,3 +1,5 @@
+
+
 const dns = require('node:dns');
 dns.setServers(['8.8.8.8', '8.8.4.4'])
 
@@ -44,6 +46,11 @@ async function run() {
 
     const database = client.db("skills-wap-db");
     const taskCollection = database.collection("tasks");
+    const proposalsCollection = database.collection("proposals")
+
+
+
+
 
 
         // no-1 : for post a task 
@@ -119,6 +126,74 @@ async function run() {
 
       res.send(result);
     });
+
+
+    //6 no- for proposals by freelancerEmail
+    app.post("/api/proposals", async (req, res) => {
+    const proposal = req.body;
+
+    // Check if already applied
+    const existingProposal =
+        await proposalsCollection.findOne({
+          taskId: proposal.taskId,
+          freelancerEmail:
+            proposal.freelancerEmail,
+        });
+
+      if (existingProposal) {
+        return res.status(400).send({
+          success: false,
+          message:
+            "You have already applied for this task.",
+        });
+      }
+
+      const result =
+        await proposalsCollection.insertOne({
+          ...proposal,
+          status: "pending",
+          submittedAt: new Date(),
+        });
+
+      res.send({
+        success: true,
+        insertedId: result.insertedId,
+      });
+    });
+
+
+
+    // Combined API: Proposals search (by taskId, freelancerEmail, or all)
+    app.get("/api/proposals", async (req, res) => {
+      try {
+        const query = {};
+
+        // ১. যদি taskId পাঠানো হয়
+        if (req.query.taskId) {
+          query.taskId = req.query.taskId;
+        }
+
+        // ২. যদি freelancerEmail পাঠানো হয়
+        if (req.query.freelancerEmail) {
+          // যদি 'mine' পাঠানো হয় এবং আপনার auth/session থাকে
+          // query.freelancerEmail = req.user?.email || req.query.freelancerEmail;
+          
+          query.freelancerEmail = req.query.freelancerEmail;
+        }
+
+        // find() ব্যবহার করলে সব সময় Array [ ] রিটার্ন করবে (যা Table-এর map() এর জন্য পারফেক্ট)
+        const result = await proposalsCollection.find(query).toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.error("Error fetching proposals:", error);
+        res.status(500).send({ message: "Failed to fetch proposals" });
+      }
+    });
+
+
+
+
 
 
 
