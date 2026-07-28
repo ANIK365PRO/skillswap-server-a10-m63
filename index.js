@@ -7,7 +7,7 @@ const express = require('express');
 const cors = require('cors');
 const app = express()
 
-const { MongoClient, ServerApiVersion } = require('mongodb');
+const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const uri = process.env.MONGODB_URI ;
 
 const port = process.env.PORT || 5000;
@@ -39,12 +39,40 @@ async function run() {
     await client.connect();
 
     //--------------------------------------------------
+    // tasks proposals payments reviews |  bookmarks notifications
+
 
     const database = client.db("skills-wap-db");
-    const collection = database.collection("tasks");
+    const taskCollection = database.collection("tasks");
 
 
-    // tasks proposals payments reviews |  bookmarks notifications
+        // no-1 : for post a task 
+    app.post('/api/tasks', async (req, res) => {
+        const task = req.body;
+        const newTask ={
+            ...task,
+            createdAt: new Date()
+        }
+        const result = await taskCollection.insertOne(newTask);
+        res.send(result);
+    })
+
+      // no-2 : for get a task by userId and status
+    app.get('/api/tasks', async (req, res) => {
+      const query = {};
+
+      if (req.query.userId) {
+        query.userId = req.query.userId;
+      }
+
+      if (req.query.status) {
+        query.status = req.query.status;
+      }
+
+      const result = await taskCollection.find(query).toArray();
+
+      res.send(result);
+    });
 
 
 
