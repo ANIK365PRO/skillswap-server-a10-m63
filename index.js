@@ -74,6 +74,51 @@ async function run() {
       res.send(result);
     });
 
+    
+    // no-3 : for get a task by id
+    app.get('/api/tasks/:id', async (req, res) => {
+      const id = req.params.id;
+
+      const query = { _id: new ObjectId(id) };
+
+      const result = await taskCollection.findOne(query);
+
+      res.send(result);
+    });
+
+
+    // no-4 : edit for update a task by _id
+    app.patch("/api/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+      const updateTaskDAta = req.body;
+
+      const filter = { _id: new ObjectId(id) };
+      const updateDoc = {
+         $set :  updateTaskDAta 
+      }
+
+
+      const result = await taskCollection.updateOne(
+        filter, updateDoc
+      );
+
+      // console.log(result)
+      res.send(result);
+    });
+
+
+    //5 no- for delete task by _id
+    app.delete("/api/tasks/:id", async (req, res) => {
+      const id = req.params.id;
+
+      const query = {
+        _id: new ObjectId(id),
+      };
+
+      const result = await taskCollection.deleteOne(query);
+
+      res.send(result);
+    });
 
 
 
