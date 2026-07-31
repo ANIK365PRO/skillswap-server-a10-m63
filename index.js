@@ -41,19 +41,39 @@ async function run() {
     await client.connect();
 
     //--------------------------------------------------
-    // tasks proposals payments reviews |  bookmarks notifications
+    // tasks proposals users payments reviews |  bookmarks notifications
 
 
     const database = client.db("skills-wap-db");
     const taskCollection = database.collection("tasks");
-    const proposalsCollection = database.collection("proposals")
+    const proposalsCollection = database.collection("proposals");
+    const usersCollection = database.collection("user");
 
 
 
+    //--------------------api----------------------------
+
+
+     // 10 no- get user api
+    app.get('/api/users', async(req, res)=>{
+      
+      const cursor = usersCollection.find().skip(4)
+      const result = await cursor.toArray()
+
+      // const query = {}
+      // if(req.query.role){
+      //   req.role = req.query.role.client
+      // }
+      // const cursor = usersCollection.find(query)
+      // const result = await cursor.toArray()
+
+
+      res.send(result)
+    });
 
 
 
-        // no-1 : for post a task 
+    // no-1 : for post a task 
     app.post('/api/tasks', async (req, res) => {
         const task = req.body;
         const newTask ={
@@ -62,7 +82,7 @@ async function run() {
         }
         const result = await taskCollection.insertOne(newTask);
         res.send(result);
-    })
+    });
 
       // no-2 : for get a task by userId and status
     app.get('/api/tasks', async (req, res) => {
@@ -163,7 +183,7 @@ async function run() {
 
 
 
-    // Combined API: Proposals search (by taskId, freelancerEmail, or all)
+    //7 no- Combined API: Proposals search (by taskId, freelancerEmail, or all)
     app.get("/api/proposals", async (req, res) => {
       try {
         const query = {};
@@ -193,6 +213,116 @@ async function run() {
 
 
 
+    //8 no-
+    app.patch("/api/proposals/:id/accept", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        // Find proposal
+        const proposal = await proposalsCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!proposal) {
+          return res.status(404).send({
+            success: false,
+            message: "Proposal not found",
+          });
+        }
+
+        // Accept selected proposal
+        await proposalsCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              status: "accepted",
+            },
+          }
+        );
+
+        // Reject all other proposals of this task
+        await proposalsCollection.updateMany(
+          {
+            taskId: proposal.taskId,
+            _id: { $ne: new ObjectId(id) },
+          },
+          {
+            $set: {
+              status: "rejected",
+            },
+          }
+        );
+
+        // Update task
+        await taskCollection.updateOne(
+          {
+            _id: new ObjectId(proposal.taskId),
+          },
+          {
+
+            $set: {
+              assignedFreelancerEmail: proposal.freelancerEmail,
+              acceptedProposalId: id,
+            },
+
+
+            // $set: {
+            //   status: "in-progress",
+            //   hasApprovedProposal: true,
+            //   assignedFreelancerEmail: proposal.freelancerEmail,
+            // },
+          }
+        );
+
+        res.send({
+          success: true,
+          message: "Proposal accepted successfully",
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
+
+    //9 no - reject
+    app.patch("/api/proposals/:id/reject", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        const result = await proposalsCollection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: {
+              status: "rejected",
+            },
+          }
+        );
+
+        res.send({
+          success: true,
+          result,
+        });
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
+
+
+
+ 
+   
 
 
 
