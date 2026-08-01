@@ -48,6 +48,7 @@ async function run() {
     const taskCollection = database.collection("tasks");
     const proposalsCollection = database.collection("proposals");
     const usersCollection = database.collection("user");
+    const paymentCollection = database.collection("payments");
 
 
 
@@ -213,7 +214,7 @@ async function run() {
 
 
 
-    //8 no-
+    //8 no- accept
     app.patch("/api/proposals/:id/accept", async (req, res) => {
       try {
         const id = req.params.id;
@@ -321,11 +322,99 @@ async function run() {
 
 
 
+    //11 no- client Payment Success API
+    app.patch("/api/tasks/:id/payment-success", async (req, res) => {
+      try {
+        const id = req.params.id;
+
+        // task খুঁজে বের করো
+        const task = await taskCollection.findOne({
+          _id: new ObjectId(id),
+        });
+
+        if (!task) {
+          return res.status(404).send({
+            success: false,
+            message: "Task not found",
+          });
+        }
+
+        // task update
+        await taskCollection.updateOne(
+          { _id: new ObjectId(id) },
+          {
+            $set: {
+              status: "in-progress",
+              paymentStatus: "paid",
+              hasApprovedProposal: true,
+            },
+          }
+        );
+
+        // payment save
+        await paymentCollection.insertOne({
+          taskId: task._id.toString(),
+          taskTitle: task.title,
+          clientName: task.clientName,
+          clientEmail: task.email,
+          freelancerEmail: task.assignedFreelancerEmail,
+          amount: task.budget,
+          paymentStatus: "paid",
+          paidAt: new Date(),
+        });
+
+        res.send({
+          success: true,
+          message: "Payment completed successfully",
+        });
+
+
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
  
    
+    //
+    // 12 no - Get client payments
+    app.get("/api/payments", async (req, res) => {
+      try {
+        const query = {};
+
+        if (req.query.clientEmail) {
+          query.clientEmail = req.query.clientEmail;
+        }
+
+        const result = await paymentCollection
+          .find(query)
+          .sort({ paidAt: -1 })
+          .toArray();
+
+        res.send(result);
+      } catch (error) {
+        console.error(error);
+
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error",
+        });
+      }
+    });
 
 
+    // 13 no - Get proposal by id for client payment to freelancer 
+    app.get("/api/proposals/:id", async (req, res) => {
+      const proposal = await proposalCollection.findOne({
+        _id: new ObjectId(req.params.id),
+      });
 
+      res.send(proposal);
+    });
 
 
     //--------------------------------------------------
