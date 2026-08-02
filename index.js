@@ -417,6 +417,87 @@ async function run() {
     });
 
 
+    // 14 no- Get freelancer projects by email (in-progress and completed)
+    app.get("/api/freelancer/projects/:email", async (req, res) => {
+      try {
+        const email = req.params.email;
+
+        const result = await taskCollection
+          .find({
+            assignedFreelancerEmail: email,
+            status: {
+              $in: ["in-progress", "completed"],
+            },
+          })
+          .toArray();
+
+        res.send(result);
+      } catch (err) {
+        console.log(err);
+
+        res.status(500).send({
+          success: false,
+          message: "Internal Server Error!!!",
+        });
+      }
+    });
+
+
+
+    // 15 no - Update task status to completed and save deliverable URL
+    app.patch("/api/tasks/:id/deliverable", async (req, res) => {
+
+       console.log("BODY =>", req.body);
+      // console.log("ID =>", req.params.id);
+      try {
+        const id = req.params.id;
+
+        const { deliverableUrl } = req.body;
+
+
+        // console.log("Task ID:", id);
+        // console.log("Body:", req.body);
+        // console.log("URL:", deliverableUrl);
+
+        const result = await taskCollection.updateOne(
+          {
+            _id: new ObjectId(id),
+          },
+          {
+            $set: {
+              status: "completed",
+              deliverableUrl,
+              completedAt: new Date(),
+            },
+          }
+        );
+
+        // console.log("UPDATE RESULT:", result);
+
+
+        res.send({
+          success: true,
+          modifiedCount: result.modifiedCount,
+        });
+      } catch (err) {
+          console.error("========== ERROR ==========");
+          console.error(err);
+          console.error(err.stack);
+
+          res.status(500).send({
+            success: false,
+            message: err.message,
+          });
+        }
+
+   });
+    
+
+
+
+
+
+
     //--------------------------------------------------
 
     // Send a ping to confirm a successful connection
