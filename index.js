@@ -409,7 +409,7 @@ async function run() {
 
     // 13 no - Get proposal by id for client payment to freelancer 
     app.get("/api/proposals/:id", async (req, res) => {
-      const proposal = await proposalCollection.findOne({
+      const proposal = await proposalsCollection.findOne({
         _id: new ObjectId(req.params.id),
       });
 
@@ -492,6 +492,117 @@ async function run() {
 
    });
     
+
+    // dasboard api
+
+    // GET /api/dashboard/client-stats?email=client@gmail.com
+    app.get("/api/dashboard/client-stats", async (req, res) => {
+      try {
+        const { email } = req.query;
+
+        const totalTasks = await taskCollection.countDocuments({
+          email,
+        });
+
+        const openTasks = await taskCollection.countDocuments({
+          email,
+          status: "open",
+        });
+
+        const inProgress = await taskCollection.countDocuments({
+          email,
+          status: "in-progress",
+        });
+
+        const completed = await taskCollection.countDocuments({
+          email,
+          status: "completed",
+        });
+
+        res.send({
+          totalTasks,
+          openTasks,
+          inProgress,
+          completed,
+        });
+      } catch (err) {
+        console.log(err);
+
+        res.status(500).send({
+          message: "Internal Server Error",
+        });
+      }
+    });
+
+    // GET /api/dashboard/freelancer-stats?email=freelancer@gmail.com
+    app.get("/api/dashboard/freelancer-stats", async (req, res) => {
+      try {
+        const { email } = req.query;
+
+        const totalProposals = await proposalsCollection.countDocuments({
+          freelancerEmail: email,
+        });
+
+        const pending = await proposalsCollection.countDocuments({
+          freelancerEmail: email,
+          status: "pending",
+        });
+
+        const accepted = await proposalsCollection.countDocuments({
+          freelancerEmail: email,
+          status: "accepted",
+        });
+
+        const rejected = await proposalsCollection.countDocuments({
+          freelancerEmail: email,
+          status: "rejected",
+        });
+
+        res.send({
+          totalProposals,
+          pending,
+          accepted,
+          rejected,
+        });
+      } catch (err) {
+        console.log(err);
+
+        res.status(500).send({
+          message: "Internal Server Error",
+        });
+      }
+    });
+
+
+    // GET /api/dashboard/admin-stats
+
+    app.get("/api/dashboard/admin-stats", async (req, res) => {
+      try {
+        const users = await usersCollection.countDocuments();
+
+        const tasks = await taskCollection.countDocuments();
+
+        const proposals = await proposalsCollection.countDocuments();
+
+        const completedTasks =
+          await taskCollection.countDocuments({
+            status: "completed",
+          });
+
+        res.send({
+          users,
+          tasks,
+          proposals,
+          completedTasks,
+        });
+      } catch (err) {
+        console.log(err);
+
+        res.status(500).send({
+          message: "Internal Server Error",
+        });
+      }
+    });
 
 
 
