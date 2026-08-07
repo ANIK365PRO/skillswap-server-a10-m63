@@ -97,7 +97,24 @@ async function run() {
         query.status = req.query.status;
       }
 
-      const result = await taskCollection.find(query).toArray();
+      // console.log("Query:", req.query);
+
+      // const result = await taskCollection.find(query).toArray(); // without limit
+
+      // for limit
+      const limit = parseInt(req.query.limit);
+      console.log("Limit:", limit);
+
+      let cursor = taskCollection
+        .find(query)
+        .sort({ createdAt: -1 });
+
+      if (limit) {
+        cursor = cursor.limit(limit);
+      }
+
+      const result = await cursor.toArray();
+
 
       res.send(result);
     });
@@ -493,7 +510,7 @@ async function run() {
    });
     
 
-    // dasboard api
+    //16 no- dasboard api
 
     // GET /api/dashboard/client-stats?email=client@gmail.com
     app.get("/api/dashboard/client-stats", async (req, res) => {
@@ -606,8 +623,63 @@ async function run() {
 
 
 
+    //17 no - home
+    // Platform Statistics API
+
+      app.get("/api/home/stats", async (req, res) => {
+        try {
+
+          // Total Tasks
+          const totalTasks = await taskCollection.countDocuments();
+
+          // Total Users
+          const totalUsers = await usersCollection.countDocuments();
+
+          // Total Payout (Only Paid Payments)
+          const payoutResult = await paymentCollection
+            .aggregate([
+              {
+                $match: {
+                  paymentStatus: "paid",
+                },
+              },
+              {
+                $group: {
+                  _id: null,
+                  totalPayout: {
+                    $sum: "$amount",
+                  },
+                },
+              },
+            ])
+            .toArray();
+
+          const totalPayout = payoutResult[0]?.totalPayout || 0;
+
+          res.send({
+            success: true,
+            data: {
+              totalTasks,
+              totalUsers,
+              totalPayout,
+            },
+          });
+
+        } catch (error) {
+
+          console.log(error);
+
+          res.status(500).send({
+            success: false,
+            message: "Internal Server Error",
+          });
+
+        }
+      });
 
 
+
+      
 
     //--------------------------------------------------
 
