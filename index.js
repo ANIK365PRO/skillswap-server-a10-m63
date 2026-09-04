@@ -85,50 +85,90 @@ async function run() {
         res.send(result);
     });
 
-      // no-2 : for get a task by userId and status
+      // no-2 : for get a task by userId and status and limit
     app.get('/api/tasks', async (req, res) => {
-      const query = {};
+      try {
+        const query = {};
 
-      if (req.query.userId) {
-        query.userId = req.query.userId;
+        if (req.query.userId) {
+          query.userId = req.query.userId;
+        }
+
+        if (req.query.status) {
+          query.status = req.query.status;
+        }
+
+        const limit = Number(req.query.limit);
+
+        // console.log("Query:", query);
+        // console.log("Raw limit:", req.query.limit);
+        // console.log("Parsed limit:", limit);
+
+        let cursor = taskCollection
+          .find(query)
+          .sort({ createdAt: -1 });
+
+        if (Number.isFinite(limit) && limit > 0) {
+          cursor = cursor.limit(limit);
+        }
+
+        const result = await cursor.toArray();
+
+        res.send(result);
+
+      } catch (error) {
+        console.error("GET /api/tasks error:", error);
+
+        res.status(500).send({
+          message: "Failed to fetch tasks",
+          error: error.message,
+        });
       }
-
-      if (req.query.status) {
-        query.status = req.query.status;
-      }
-
-      // console.log("Query:", req.query);
-
-      // const result = await taskCollection.find(query).toArray(); // without limit
-
-      // for limit
-      const limit = parseInt(req.query.limit);
-      console.log("Limit:", limit);
-
-      let cursor = taskCollection
-        .find(query)
-        .sort({ createdAt: -1 });
-
-      if (limit) {
-        cursor = cursor.limit(limit);
-      }
-
-      const result = await cursor.toArray();
-
-
-      res.send(result);
     });
 
     
     // no-3 : for get a task by id
+    // app.get('/api/tasks/:id', async (req, res) => {
+    //   const id = req.params.id;
+
+    //   const query = { _id: new ObjectId(id) };
+
+    //   const result = await taskCollection.findOne(query);
+
+    //   res.send(result);
+    // });
+
     app.get('/api/tasks/:id', async (req, res) => {
-      const id = req.params.id;
+      try {
+        const id = req.params.id;
 
-      const query = { _id: new ObjectId(id) };
+        if (!ObjectId.isValid(id)) {
+          return res.status(400).send({
+            message: "Invalid task ID",
+          });
+        }
 
-      const result = await taskCollection.findOne(query);
+        const query = {
+          _id: new ObjectId(id),
+        };
 
-      res.send(result);
+        const result = await taskCollection.findOne(query);
+
+        if (!result) {
+          return res.status(404).send({
+            message: "Task not found",
+          });
+        }
+
+        res.send(result);
+
+      } catch (error) {
+        console.error("GET /api/tasks/:id error:", error);
+
+        res.status(500).send({
+          message: "Failed to fetch task",
+        });
+      }
     });
 
 
@@ -677,6 +717,64 @@ async function run() {
         }
       });
 
+
+    // 18 no - profile update api 
+
+   app.patch("/api/users/profile", async (req, res) => {
+    try {
+      const { email, name, image, bio, skills, hourlyRate } = req.body;
+
+      if (!email) {
+        return res.status(400).send({
+          success: false,
+          message: "Email is required",
+        });
+      }
+
+      const updateData = {
+        name: name?.trim(),
+        image: image?.trim() || "",
+        bio: bio?.trim() || "",
+        updatedAt: new Date(),
+      };
+
+      // if role Freelancer 
+      if (skills !== undefined) {
+        updateData.skills = skills;
+      }
+
+      if (hourlyRate !== undefined) {
+        updateData.hourlyRate = Number(hourlyRate);
+      }
+
+      const result = await usersCollection.updateOne(
+        { email },
+        {
+          $set: updateData,
+        }
+      );
+
+      if (result.matchedCount === 0) {
+        return res.status(404).send({
+          success: false,
+          message: "User not found",
+        });
+      }
+
+      res.send({
+        success: true,
+        message: "Profile updated successfully",
+      });
+
+    } catch (error) {
+      console.error("Profile update error:", error);
+
+      res.status(500).send({
+        success: false,
+        message: "Failed to update profile",
+      });
+    }
+  });
 
 
       
