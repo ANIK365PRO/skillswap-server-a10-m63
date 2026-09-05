@@ -720,62 +720,121 @@ async function run() {
 
     // 18 no - profile update api 
 
-   app.patch("/api/users/profile", async (req, res) => {
-    try {
-      const { email, name, image, bio, skills, hourlyRate } = req.body;
+    app.patch("/api/users/profile", async (req, res) => {
+      try {
+        const { email, name, image, bio, skills, hourlyRate } = req.body;
 
-      if (!email) {
-        return res.status(400).send({
-          success: false,
-          message: "Email is required",
-        });
-      }
-
-      const updateData = {
-        name: name?.trim(),
-        image: image?.trim() || "",
-        bio: bio?.trim() || "",
-        updatedAt: new Date(),
-      };
-
-      // if role Freelancer 
-      if (skills !== undefined) {
-        updateData.skills = skills;
-      }
-
-      if (hourlyRate !== undefined) {
-        updateData.hourlyRate = Number(hourlyRate);
-      }
-
-      const result = await usersCollection.updateOne(
-        { email },
-        {
-          $set: updateData,
+        if (!email) {
+          return res.status(400).send({
+            success: false,
+            message: "Email is required",
+          });
         }
-      );
 
-      if (result.matchedCount === 0) {
-        return res.status(404).send({
+        const updateData = {
+          name: name?.trim(),
+          image: image?.trim() || "",
+          bio: bio?.trim() || "",
+          updatedAt: new Date(),
+        };
+
+        // if role Freelancer 
+        if (skills !== undefined) {
+          updateData.skills = skills;
+        }
+
+        if (hourlyRate !== undefined) {
+          updateData.hourlyRate = Number(hourlyRate);
+        }
+
+        const result = await usersCollection.updateOne(
+          { email },
+          {
+            $set: updateData,
+          }
+        );
+
+        if (result.matchedCount === 0) {
+          return res.status(404).send({
+            success: false,
+            message: "User not found",
+          });
+        }
+
+        res.send({
+          success: true,
+          message: "Profile updated successfully",
+        });
+
+      } catch (error) {
+        console.error("Profile update error:", error);
+
+        res.status(500).send({
           success: false,
-          message: "User not found",
+          message: "Failed to update profile",
         });
       }
+    });
 
-      res.send({
-        success: true,
-        message: "Profile updated successfully",
-      });
 
-    } catch (error) {
-      console.error("Profile update error:", error);
+    // 19 no - get top freelancers for browse freelancers page/ home page with optional role filter and limit
+    app.get('/api/users/freelancers', async (req, res) => {
+      try {
+        const query = {};
 
-      res.status(500).send({
-        success: false,
-        message: "Failed to update profile",
-      });
-    }
-  });
+        if (req.query.role) {
+          query.role = req.query.role;
+        }
 
+        // const result = await usersCollection
+        //   .find(query).skip(6)
+        //   .toArray();
+
+
+
+        const limit = Number(req.query.limit);
+
+        let cursor = usersCollection
+          .find(query).skip(6)
+          .sort({ createdAt: -1 });
+
+        if (Number.isFinite(limit) && limit > 0) {
+          cursor = cursor.limit(limit);
+        }
+
+        const result = await cursor.toArray();  
+
+        res.send(result);
+      } catch (error) {
+        res.status(500).send({
+          message: "Failed to fetch users",
+        });
+      }
+    });
+
+    // 20 no - get browse freelancers profile by id
+    app.get("/api/users/:id", async (req, res) => {
+      try {
+        const { id } = req.params;
+
+        const user = await usersCollection.findOne({
+          _id: new ObjectId(id),
+          role: "freelancer",
+        });
+
+        if (!user) {
+          return res.status(404).send({
+            message: "Freelancer not found",
+          });
+        }
+
+        res.send(user);
+      } catch (error) {
+        res.status(500).send({
+          message: "Failed to fetch freelancer",
+        });
+      }
+    });
 
       
 
