@@ -10,6 +10,8 @@ const cors = require('cors');
 const app = express()
 
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
+const { createRemoteJWKSet, jwtVerify } = require("jose-cjs");
+
 const uri = process.env.MONGODB_URI ;
 
 const port = process.env.PORT || 5000;
@@ -53,6 +55,42 @@ async function run() {
 
 
     //--------------------api----------------------------
+
+
+      //json token to server protect
+    const JWKS = createRemoteJWKSet(
+        new URL(`${process.env.CLIENT_URL}/api/auth/jwks`)
+    )
+
+    
+    const verifyToken = async (req, res, next) =>{
+        const header = await req.header.authorization
+        // console.log(header)
+
+        if(!authHeader){
+            return res.status(401).json({message: "Unauthorized"})
+        }
+
+        const token = authHeader.split(" ")[1]
+        // console.log(token)
+
+        if(!token){
+            return res.status(401).json({message: "Unauthorized"})
+        }
+
+
+        try{
+             const { payload } = await jwtVerify(token, JWKS)
+             console.log(payload)
+             next()
+
+
+        }catch(error){
+            return res.status(403).json({
+                message: "Forbidden"
+            })
+        }
+    }
 
 
      // 10 no- get user api
