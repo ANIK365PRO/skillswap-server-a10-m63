@@ -58,7 +58,7 @@ async function run() {
      // 10 no- get user api
     app.get('/api/users', async(req, res)=>{
       
-      const cursor = usersCollection.find().skip(4)
+      const cursor = usersCollection.find()
       const result = await cursor.toArray()
 
       // const query = {}
@@ -777,7 +777,7 @@ async function run() {
     });
 
 
-    // 19 no - get top freelancers for browse freelancers page/ home page with optional role filter and limit
+    // 19 no -(public route) get top freelancers for browse freelancers page/ home page with optional role filter and limit
     app.get('/api/users/freelancers', async (req, res) => {
       try {
         const query = {};
@@ -795,7 +795,7 @@ async function run() {
         const limit = Number(req.query.limit);
 
         let cursor = usersCollection
-          .find(query).skip(6)
+          .find(query)
           .sort({ createdAt: -1 });
 
         if (Number.isFinite(limit) && limit > 0) {
@@ -812,7 +812,7 @@ async function run() {
       }
     });
 
-    // 20 no - get browse freelancers profile by id
+    // 20 no -(public route) get browse freelancers profile by id
     app.get("/api/users/:id", async (req, res) => {
       try {
         const { id } = req.params;
